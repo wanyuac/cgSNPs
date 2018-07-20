@@ -6,7 +6,7 @@ Generating a CSV-formatted SNP table from a multi-FASTA file.
 Python 2 and 3 compatible
 Copyright 2018 Yu Wan <wanyuac@gmail.com>
 Licensed under the Apache License, Version 2.0
-First and the latest edition: 19/7/2018
+First edition: 19/7/2018; the latest edition: 20/7/2018
 """
 
 from __future__ import print_function
@@ -74,6 +74,9 @@ def fasta2dict(mfasta, coords, key, ingroup):
     n_coords = len(coords)
     key_filter = key != ""
     ingroup_filter = ingroup != []
+    if (not key_filter) and (not ingroup_filter):
+        print("No filter for sequences is applied.")
+    
     with open(mfasta, "rU") as f:
         for entry in SeqIO.parse(f, "fasta"):
             strain = entry.id
