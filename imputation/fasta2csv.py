@@ -24,8 +24,7 @@ Convert a multi-sequence alignment (in FASTA format) into a comma-delimited SNP 
 compatible with the script parseSNPtable.py in the RedDog package. It is useful in processing
 the SNPs after imputation.
 
-Example:
-  python fasta2csv -c snp.coords -i mapping/alignment_imputed.mfasta -o snps/snp_table.csv
+Example: python fasta2csv -c snp.coords -i mapping/alignment_imputed.mfasta -o snps/snp_table.csv
 
 Given an um-imputed SNP table from parseSNPtable.py, we can use the command
 'cut -d, -f1 < snpTable.csv | tail -n +2 > snp.coords' to get the coordinate list while skipping
