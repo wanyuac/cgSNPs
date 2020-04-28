@@ -18,9 +18,10 @@ Example command:
 Dependencies: Python v3 and packages pandas (pandas.pydata.org/)
 Copyright 2020 Yu Wan <wanyuac@126.com>
 Licensed under the GNU General Public Licence version 3 (GPLv3) <https://www.gnu.org/licenses/>.
-Publication: 25 Apr 2020; last modification: 25 Apr 2020.
+Publication: 25 Apr 2020; last modification: 28 Apr 2020.
 """
 
+import sys
 import pandas as pd
 from argparse import ArgumentParser
 
@@ -74,6 +75,10 @@ def mergeRegions(tab, nr):
         r2 = tab.iloc[i]  # Get boundaries of the second region
         lb2 = r2['From']  # Lower boundary of the new region
         ub2 = r2['To']  # Upper boundary of the second region
+        
+        # Check validity
+        if lb2 > ub2:
+            sys.exit('Error: lower bound %d > upper bound %d.' % (lb2, ub2))
         
         # Decision: either merge two regions or add a separate region.
         if lb2 <= (ub1 + 1):
