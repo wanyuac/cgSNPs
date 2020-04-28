@@ -10,7 +10,7 @@ Dependencies: Python v3, package pysam (pysam.readthedocs.io).
 
 Copyright 2020 Yu Wan <wanyuac@126.com>
 Licensed under the GNU General Public Licence version 3 (GPLv3) <https://www.gnu.org/licenses/>.
-Publication: 15 Apr 2020
+Publication: 15 Apr 2020; latest modification: 29 Apr 2020
 """
 
 from argparse import ArgumentParser
