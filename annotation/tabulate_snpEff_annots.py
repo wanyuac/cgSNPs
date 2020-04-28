@@ -46,7 +46,7 @@ def main():
     # Parse the ANN sub-domain and write lines into the output file
     tsv = open(args.o, 'w')
     tsv.write('\t'.join(HEADER) + '\n')  # Write the header
-    for rec in vcf.fetch():
+    for rec in vcf.fetch():  # Go through each line (position) and extract annotations
         parseVCFRec(rec, tsv)
     tsv.close()
     
@@ -59,14 +59,17 @@ def parseVCFRec(rec, tsv_handle):
     Use dir(rec) to see attributes of the record.
     """
     fields = [rec.chrom, rec.pos, rec.ref]
-    annots = rec.info['ANN']  # A tuple object. Use len(annots) to show the number of its elements.
-    i = 1  # The rank
-    for f in annots:
-        ann_fields = f.split('|')
-        ann_fields = ['NA' if x == '' else x for x in ann_fields]  # Replace empty strings with 'NA'
-        ann_fields = [rec.chrom, str(rec.pos), rec.ref, ann_fields[0], str(i)] + ann_fields[1:]  # Insert the rank into this list
-        tsv_handle.write('\t'.join(ann_fields) + '\n')  # Write a new line into the output file
-        i += 1  # Move to the annotation of the next rank
+    if 'ANN' in rec.info.keys()
+        annots = rec.info['ANN']  # A tuple object. Use len(annots) to show the number of its elements.
+        i = 1  # The rank
+        for f in annots:
+            ann_fields = f.split('|')
+            ann_fields = ['NA' if x == '' else x for x in ann_fields]  # Replace empty strings with 'NA'
+            ann_fields = [rec.chrom, str(rec.pos), rec.ref, ann_fields[0], str(i)] + ann_fields[1:]  # Insert the rank into this list
+            tsv_handle.write('\t'.join(ann_fields) + '\n')  # Write a new line into the output file
+            i += 1  # Move to the annotation of the next rank
+    else:
+        print("Warning: skipped position %d as it does not have the field 'ANN'." % rec.pos)
     
     return
 
