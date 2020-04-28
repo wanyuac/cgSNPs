@@ -50,15 +50,16 @@ if __name__ == "__main__":
 			else:  # Start processing hits from the seventh line of the input file.
 				data = line.split("|")
 				if float(data[3]) >= Identity:
-					new_coords = data[0].split()  # Drop all white-spaces
+					coords_ref = data[0].split()  # Drop all white-spaces
+					coords_query = data[1].split()
 					"""
 					S1, E1: with respect to the reference sequence; S2, E2: with respect to the query
 					sequence. See http://mummer.sourceforge.net/manual.
 					"""
-					start_r = int(new_coords[0])  # The reference
-					stop_r = int(new_coords[1])
-					start_q = int(new_coords[2])  # The query sequence
-					stop_q = int(new_coords[3])
+					start_r = int(coords_ref[0])
+					stop_r = int(coords_ref[1])
+					start_q = int(coords_query[0])
+					stop_q = int(coords_query[1])
 					
 					# Skip all self-hits
 					if start_r != start_q and stop_r != stop_q:
