@@ -13,7 +13,8 @@ RedDog:
 	
 Created: 10 Sep 2014
 Changes:
-         24 Apr 2020 - Update for Python3 syntax - Yu Wan <wanyuac@126.com>
+        24 Apr 2020 - Update for Python3 syntax - Yu Wan <wanyuac@126.com>
+        28 Apr 2020 - Fix a critical issue that the script failed to ignore self-hits - Yu Wan 
 """
 
 import os, sys, glob
@@ -44,15 +45,24 @@ if __name__ == "__main__":
 		in_file = open(input)
 		count = 0
 		for line in in_file:
-			if count <= 5:
+			if count <= 5:  # Skip the first six lines that do not provide hit information
 				count += 1
-			else:
+			else:  # Start processing hits from the seventh line of the input file.
 				data = line.split("|")
 				if float(data[3]) >= Identity:
-					new_coords = data[0].split()
-					start = int(new_coords[0])
-					stop = int(new_coords[1])
-					coords.append([str(start),str(stop)])		
+					new_coords = data[0].split()  # Drop all white-spaces
+					"""
+					S1, E1: with respect to the reference sequence; S2, E2: with respect to the query
+					sequence. See http://mummer.sourceforge.net/manual.
+					"""
+					start_r = int(new_coords[0])  # The reference
+					stop_r = int(new_coords[1])
+					start_q = int(new_coords[2])  # The query sequence
+					stop_q = int(new_coords[3])
+					
+					# Skip all self-hits
+					if start_r != start_q and stop_r != stop_q:
+						coords.append([str(start),str(stop)])
 		in_file.close()
 		return(coords)
 
