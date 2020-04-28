@@ -62,7 +62,7 @@ if __name__ == "__main__":
 					
 					# Skip all self-hits
 					if start_r != start_q and stop_r != stop_q:
-						coords.append([str(start),str(stop)])
+						coords.append([str(start_r),str(stop_r)])
 		in_file.close()
 		return(coords)
 
