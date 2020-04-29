@@ -59,7 +59,7 @@ def parseVCFRec(rec, tsv_handle):
     Use dir(rec) to see attributes of the record.
     """
     fields = [rec.chrom, rec.pos, rec.ref]
-    if 'ANN' in rec.info.keys()
+    if 'ANN' in rec.info.keys():
         annots = rec.info['ANN']  # A tuple object. Use len(annots) to show the number of its elements.
         i = 1  # The rank
         for f in annots:
