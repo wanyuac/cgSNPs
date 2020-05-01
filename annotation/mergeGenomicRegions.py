@@ -9,16 +9,20 @@ regions after region merge, which makes its functionality more focused. User may
 coordinate list and bcftools to filter out variants identified in certain regions.
 
 Input: A two-column, comma delimited (CSV), no-header text file in which each row defines the
-start and end coordinates of a genomic region, respectively.
+start and end coordinates of a genomic region, respectively. The input can also come from the stdin.
+
 Output: A test file of the same format as the input, but has its duplicated rows excluded and
 overlapping regions merged.
-Example command:
+
+Example command (three ways to run this script):
     python mergeGenomicRegions.py -i repeats.coords -o repeats_merged.coords
+    python filterCoords.py -i genome.coords -I 90 | python mergeGenomicRegion.py -o repeats_merged.coords
+    python filterCoords.py -i genome.coords -o repeats.coords -I 90 && python mergeGenomicRegion.py -i repeats.coords -o repeats_merged.coords
 
 Dependencies: Python v3 and packages pandas (pandas.pydata.org/)
 Copyright 2020 Yu Wan <wanyuac@126.com>
 Licensed under the GNU General Public Licence version 3 (GPLv3) <https://www.gnu.org/licenses/>.
-Publication: 25 Apr 2020; last modification: 28 Apr 2020.
+Publication: 25 Apr 2020; last modification: 1 May 2020.
 """
 
 import sys
@@ -26,8 +30,8 @@ import pandas as pd
 from argparse import ArgumentParser
 
 def parse_arguments():
-    parser = ArgumentParser(description= 'Exclude duplicated region definitions and merge overlapping regions')
-    parser.add_argument('-i', type = str, required = True, help = 'Path to the input CSV file')
+    parser = ArgumentParser(description = 'Exclude duplicated region definitions and merge overlapping regions')
+    parser.add_argument('-i', type = str, required = False, default = '', help = 'Path to the input CSV file')
     parser.add_argument('-o', type = str, required = True, help = 'Path to the output CSV file')
 
     return parser.parse_args()
@@ -38,7 +42,10 @@ def main():
     
     # Import the raw coordinate table
     try:
-        tab = pd.read_csv(args.i, header = None, names = ['From', 'To'], index_col = None, dtype = int)
+        if args.i == '':
+            tab = pd.read_csv(sys.stdin, header = None, names = ['From', 'To'], index_col = None, dtype = int)
+        else:
+            tab = pd.read_csv(args.i, header = None, names = ['From', 'To'], index_col = None, dtype = int)
     except:
         print('The input file is not accessible.')
 
