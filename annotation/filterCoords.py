@@ -22,18 +22,18 @@ from argparse import ArgumentParser
 
 def parse_arguments():
 	parser = ArgumentParser(description = "Filter coordinates from program show-coords by nucleotide identity")
-	parser.add_argument("-i", "--input", type = str, dest = "input", required = True,
+	parser.add_argument("-i", "--input", type = str, dest = "input", required = True,\
 						help = "Input: coords file from Mummer numcer (default none)")
-	parser.add_argument("-o", "--output", type = str, dest = "output", required = False, default = "",
+	parser.add_argument("-o", "--output", type = str, dest = "output", required = False, default = "",\
 						help = "Output: filtered coords file for parseSNPTable (default stdout)")
-	parser.add_argument("-I", "--Identity", type = float, dest = "Identity", required = False, default = 85.0,
+	parser.add_argument("-I", "--Identity", type = float, dest = "Identity", required = False, default = 85.0,\
 						help = "Identity: level of Identity to filter out (default >=85.0)")
 	
 	return parser.parse_args()
 
 
 def main():
-	arguments = parse_parameters()
+	arguments = parse_arguments()
 	coordsOut(filterCoords(arguments.input, arguments.Identity), arguments.output)
 		
 	return
