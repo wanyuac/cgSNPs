@@ -66,7 +66,7 @@ The script creates three output files:
 - `[sample name]__[suffix]__het.tsv`: A table summarising hetSNPs for the plot.
 - `[sample name]__[suffix]__hom.tsv`: A table summarising homSNPs for the plot.
 
-Examples from the development of [GeneMates](https://github.com/wanyuac/GeneMates).
+Examples from our development of R package [GeneMates](https://github.com/wanyuac/GeneMates):
 
 
 
