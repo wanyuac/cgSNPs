@@ -60,7 +60,7 @@ for v in "${fields[@]}"; do
 done
 
 # Four reserved columns in the output of vcftools: CHROM, POS, REF, ALT. They must not appear in the argument -f.
-n=$[ ${#fields[@]} + 5 ]  # POS, REF, ALT, FIELD_1 (the sixth column), FIELD_2, ... So it is 6 + n - 1 = 5 + n.
+#n=$[ ${#fields[@]} + 5 ]  # POS, REF, ALT, FIELD_1 (the sixth column), FIELD_2, ... So it is 6 + n - 1 = 5 + n.
 
 # Parse VCFs
 while read -r id; do  # read lines in a file
