@@ -26,7 +26,7 @@ This bash script extracts values of sub-fields from field INFO using VCFtools an
 - `-s/--source`: Directory where VCF files are stored.
 - `-o/--output`: Output directory.
 - `-r/--root`: Root shared by filenames of VCF files.
-- `-f/--fields`: Names of sub-fields within field INFO for value extraction. Since field names POS, REF, ALT are not part of INFO and will always be extracted by VCFtools, they must not be placed in this parameter.
+- `-f/--fields`: Names of sub-fields within field INFO for value extraction. Since field names POS, REF, ALT are not part of INFO and will always be extracted by VCFtools, they must not be placed in this parameter. DP4 is a mandatory field for `hetSNP_depthPlot.R`.
 - `-d/--vcftoolsDir`: Installation directory of VCFtools. Default: current working directory.
 
 Example command line:
@@ -47,9 +47,40 @@ Use command `which vcftools` to find out the installation directory of VCFtools.
 
 
 
-## 2. hetSNP_depthPlot.R
+## 2. hetSNP\_depthPlot.R
 
-(To be continue)
+This R script draws read depths of heterozygous (het) and homozygous (hom) SNPs for a single sample. Specifically, read depths of heterozygous SNPs (hetSNPs) will be drawn as foreground points (blue and red), whereas those of homozygous SNPs (homSNPs) will be drawn as background points (light grey). The script has six parameters:
+
+- `--hetSNP`: Path to a tab-delimited (TSV) file that contains the DP4 sub-field (within field INFO) of heterozygous SNPs extracted from a VCF file. Mandatory columns: CHROM, POS, DP4.
+- `--homSNP`: Path to a tab-delimited (TSV) file that contains the DP4 sub-field (within field INFO) of homozygous SNPs extracted from a VCF file. Mandatory columns: CHROM, POS, DP4.
+- `--sampleName`: A sample name that will be used as the filename prefix of outputs.
+- `--genomeLen`: Length (in bp) of the reference genome to which reads are mapped.
+- `--outdir`: Output directory.
+- `--suffix`: A suffix added after the sample name in output filenames.
+
+For each sample, the two input TSV files (hom and het) can be produced from one VCF file (generated with `bcftools mpileup` and so forth) using script `extractInfoFromVCF.sh`.
+
+The script creates three output files:
+
+- `[Number of hetSNPs]__[sample name]__[suffix].png`: The depth plot, which suggests purity of sequence library. The plot is comprised of three panels.
+- `[sample name]__[suffix]__het.tsv`: A table summarising hetSNPs for the plot.
+- `[sample name]__[suffix]__hom.tsv`: A table summarising homSNPs for the plot.
+
+Examples from the development of [GeneMates](https://github.com/wanyuac/GeneMates).
 
 
 
+<figure>
+    <img src = "./Figure/76__ERR178221__hetSNPs.png" alt = "Read depths from a putatively clean library" />
+    <figcaption><b>Figure 1. Read depths from a putatively clean library of <i>E. coli</i> genome ERR178221.</b> Heterozygous SNPs are clustered within certain regions. Colours for the top panel: red, alternative alleles; blue, reference alleles.</figcaption>
+</figure>
+
+<figure>
+    <img src = "./Figure/2523__ERR134517__hetSNPs.png" alt = "Read depths from a putatively contaminated library" />
+    <figcaption><b>Figure 2. Read depths from a putatively contaminated library of <i>E. coli</i> genome ERR134517.</b> Heterozygous SNPs are spread across the whole length of genome and two bands of hetSNP read depths are shown in the bottom panel, which indicates the proportion of contaminated DNA in the library. Colours for the top panel: red, alternative alleles; blue, reference alleles.</figcaption>
+</figure>
+
+
+### hetSNP\_depthPlot\_slurm.sh
+
+A bash script submitting SLURM jobs of `hetSNP_depthPlot.R` to a Linux computer cluster for a set of samples.

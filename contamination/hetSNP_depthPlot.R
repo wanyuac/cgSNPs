@@ -1,33 +1,43 @@
 #!/usr/bin/env Rscript
+#
 # Draw read depths of heterozygous (het) and homozygous (hom) SNPs for a single sample.
 # Read depths of heterozygous SNPs will be drawn as foreground points; those of homozygous SNPs will be drawn as background points.
-# Commandline: Rscript hetSNP_depthPlot.R --het [hetSNP table] --hom [homSNP table] --delim "\t" --sampleName [sample name] --genomeLen [length (bp) of the reference genome] \
+# Commandline: Rscript hetSNP_depthPlot.R --het [hetSNP table] --hom [homSNP table] --sampleName [sample name] --genomeLen [length (bp) of the reference genome] \
 # --outdir [directory path not ended with a forward slash] --suffix [filename suffix]
 # Example command:
 #   Rscript drawHetSNPDP.R --het hetSNP__info.tsv --hom homSNP__info.tsv --sampleName ST258_1 --genomeLen 5.25e6 --outdir pic --suffix hetSNPs
 # Notice because RedDog only store variants in VCFs, there is no band of BAF = 0 for homozygous SNPs in the BAF plot.
 #
-# Copyright 2017 Yu Wan <wanyuac@gmail.com>
-# Licensed under the Apache License, Version 2.0
-# Edition: 28/4, 2/5/2017, 8/3/2018; last modification: 13/8/2020
+# Copyright 2017-2020 Yu Wan <wanyuac@gmail.com>
+# Licensed under the GNU General Public License (GPL) version 3
+# Edition: 28/4, 2/5/2017, 8/3/2018; last modification: 14 Aug 2020
 
-##### Arguments ###############
+#################################
+# Preparation
+#################################
+
+##### Definition of arguments ###############
 library(optparse)
 
 optionList <- list(
-    make_option("--hetSNP", type = "character", default = NULL, help = "A delimited text file of heterozygous SNPs", metavar = "character"),
-    make_option("--homSNP", type = "character", default = NULL, help = "A delimited text file of homozygous SNPs [default= %default]", metavar = "character"),
-    make_option("--delim", type = "character", default = "\t", help = "Deliminator of the input SNP tables [default= %default]", metavar = "character"),
-    make_option("--sampleName", type = "character", default = "sample", help = "Sample name [default = %default]", metavar = "character"),
-    make_option("--genomeLen", type = "integer", default = 5.25e6, help = "Length of the reference genome [default = %default]", metavar = "integer"),
-    make_option("--outdir", type = "character", default = ".", help = "Output directory (not ended with a forward slash) for plots [default = %default]", metavar = "character"),
-    make_option("--suffix", type = "character", default = "hetSNPs", help = "Suffix of the output file name [default = %default]", metavar = "character")
+    make_option("--hetSNP", type = "character", default = NULL, metavar = "character",
+                help = "A delimited text file of heterozygous SNPs"),
+    make_option("--homSNP", type = "character", default = NULL, metavar = "character",
+                help = "A delimited text file of homozygous SNPs [default= %default]"),
+    make_option("--sampleName", type = "character", default = "sample", metavar = "character",
+                help = "Sample name [default = %default]",),
+    make_option("--genomeLen", type = "integer", default = 5.25e6, metavar = "integer",
+                help = "Length (bp) of the reference genome to which reads were mapped [default = %default]"),
+    make_option("--outdir", type = "character", default = ".", metavar = "character",
+                help = "Output directory (not ended with a forward slash) for plots [default = %default]"),
+    make_option("--suffix", type = "character", default = "readDepths", metavar = "character",
+                help = "Suffix of the output filename [default = %default]")
 )
 
 optParser <- OptionParser(option_list = optionList)
 
 
-##### Constants ###############
+##### Specification of constants ###############
 IMG.WIDTH <- 1000
 IMG.HEIGHT.SINGLE <- 600
 IMG.HEIGHT.TRIPLE <- 1200
@@ -44,17 +54,18 @@ X.INTERVAL <- 0.5e6  # width of every interval of the X axis (500 kb by default)
 DP.INTERVAL <- 20
 CEX.AXIS <- 1.5
 CEX.AXIS.LABEL <- 2
+OUTPUT_COLS <- c("CHROM", "POS", "BAF", "DP", "DP.REF", "DP.ALT", "DP4")  # Columns of output TSV files
 
 
-##### Data structure and functions ###############
-checkColumnNames <- function(x, target.names, id) {
+##### Definition of data structure and functions ###############
+.checkColumnNames <- function(x, target.names, id) {
     presence <- target.names %in% names(x)
     if (sum(presence) < length(target.names)) {
         stop(paste("Missing column name(s) in the SNP table", paste0(id, ":"), paste(target.names[!presence], collapse = ","), sep = " "))
     }
 }
 
-parseDP4 <- function(x) {
+.parseDP4 <- function(x) {
     # parse the DP4 field in the SNP table. Two new columns will be appended to the original data frame x.
     n <- nrow(x)
     x <- cbind(x, data.frame(DP.REF = rep(0, times = n), DP.ALT = rep(0, times = n)))
@@ -67,6 +78,10 @@ parseDP4 <- function(x) {
     return(x)
 }
 
+
+#################################
+# Main program
+#################################
 
 ##### Import data ###############
 opts <- parse_args(optParser)  # parse arguments
@@ -82,10 +97,10 @@ if ((opts$outdir != ".") & (!file.exists(opts$outdir))) {
 }
 
 # import SNP tables
-het <- read.delim(opts$hetSNP, sep = opts$delim, stringsAsFactors = FALSE)
+het <- read.delim(opts$hetSNP, sep = "\t", header = TRUE, stringsAsFactors = FALSE)
 names(het) <- toupper(names(het))
-checkColumnNames(het, c("POS", "DP", "DP4"), "het")
-het <- parseDP4(het)  # parse the DP4 column for read depths
+.checkColumnNames(het, c("CHROM", "POS", "DP4"), "het")
+het <- .parseDP4(het)  # parse the DP4 column for read depths
 n.het <- nrow(het)  # number of hetSNPs
 het.maxDP <- ceiling(max(het$DP.REF, het$DP.ALT) / 10) * 10  # maximal read depth of hetSNPs
 
@@ -93,10 +108,10 @@ if (is.null(opts$homSNP)) {
     no.homSNP <- TRUE
 } else {
     no.homSNP <- FALSE
-    hom <- read.delim(opts$homSNP, sep = opts$delim, stringsAsFactors = FALSE)
+    hom <- read.delim(opts$homSNP, sep = "\t", stringsAsFactors = FALSE)
     names(hom) <- toupper(names(hom))
-    checkColumnNames(hom, c("POS", "DP", "DP4"), "hom")
-    hom <- parseDP4(hom)
+    .checkColumnNames(hom, c("CHROM", "POS", "DP4"), "hom")
+    hom <- .parseDP4(hom)
     het$DP <- het$DP.REF + het$DP.ALT  # I deliberately do not use the original het$DP for plots as it contains read depths of other alleles when the alternative allele is not unique for a SNP.
     hom$DP <- hom$DP.REF + hom$DP.ALT
     avgDP <- round(mean(c(hom$DP, het$DP)), digits = 2)  # average read depth of SNPs based on high-quality base calls
@@ -168,3 +183,10 @@ if (no.homSNP) {  # a single panel: hetSNPs
 }
 
 dev.off()
+
+
+##### Save data frames underlying the output figure ###############
+write.table(het[, OUTPUT_COLS], sep = "\t", quote = FALSE, row.names = FALSE, col.names = TRUE,
+            file = paste(opts$outdir, paste(opts$sampleName, paste0(opts$suffix, "__het.tsv"), sep = "__"), sep = "/"))
+write.table(hom[, OUTPUT_COLS], sep = "\t", quote = FALSE, row.names = FALSE, col.names = TRUE,
+            file = paste(opts$outdir, paste(opts$sampleName, paste0(opts$suffix, "__hom.tsv"), sep = "__"), sep = "/"))
