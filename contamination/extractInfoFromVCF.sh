@@ -1,17 +1,18 @@
 #!/bin/bash
 # Extract columns from a list of VCF files.
 # Command line:
-#   bash extractInfoFromVCF -i sample_name.txt -s [source directory] -o [output directory] \
-#   -r [identifier between the sample id and file name extension] -f [comma-delimited fields of INFO] -d .
+#   bash extractInfoFromVCF -i [a text file of sample names] -s [source directory] -o [output directory] \
+#   -r [a common root (between the sample id and file name extension) shared by names of VCF files] \
+#   -f [comma-delimited fields of INFO to be extracted] -d [directory of vcftools]
 # Directory names must not be followed by forward lashes.
 # The INFO domain must not contain POS. The position information is however always be extracted to get the cut command execute correctly.
 # Example:
-#   bash extractInfoFromVCF -i strains_all.txt -s vcf -o info -f '_study1' -f 'POS,INDEL,DP,DP4'
+#   bash extractInfoFromVCF -i strains_all.txt -s vcf -o info -r '_study1' -f 'DP,DP4'
 # Copyright (C) 2017 Yu Wan <wanyuac@gmail.com>
 # Licensed under the GNU General Public License (GPL) version 3
-# Earliest editions: 7, 20, 22/4/2017; the latest edition: 29/11/2017
+# Earliest editions: 7, 20, 22/4/2017, 29/11/2017; the latest edition: 13 Aug 2020
 
-vcftools_dir="/usr/local/easybuild/software/VCFtools/0.1.12-vlsci_intel-2015.08.25-Perl-5.20.0/bin"  # default path on Helix
+vcftools_dir='.'  # Default path to vcftools is the current working directory, which is often not the case in the real world.
 
 # Read five arguments
 while [[ $# -gt 1 ]]; do  # loops as long as the number of arguments >= 2
@@ -53,14 +54,16 @@ if [ ! -d $output_dir ]; then
 fi
 
 # Arrange fields to be extracted from VCFs
-info="--get-INFO POS"
+info=''
 for v in "${fields[@]}"; do
-    info="${info} --get-INFO ${v}"  # concatenate the "--get-INFO" arguments
+    info="${info}--get-INFO ${v} "  # concatenate the "--get-INFO" arguments
 done
 
+# Four reserved columns in the output of vcftools: CHROM, POS, REF, ALT. They must not appear in the argument -f.
 n=$[ ${#fields[@]} + 5 ]  # POS, REF, ALT, FIELD_1 (the sixth column), FIELD_2, ... So it is 6 + n - 1 = 5 + n.
 
 # Parse VCFs
 while read -r id; do  # read lines in a file
-	${vcftools_dir}/vcftools --vcf ${source_dir}/${id}${filename_root}.vcf --out ${id} ${info} -c | cut -f2-4,6-${n} > ${output_dir}/${id}__info.tsv
+	#${vcftools_dir}/vcftools --vcf ${source_dir}/${id}${filename_root}.vcf --out ${id} ${info} -c | cut -f2-4,6-${n} > ${output_dir}/${id}__info.tsv
+    ${vcftools_dir}/vcftools --vcf ${source_dir}/${id}${filename_root}.vcf ${info}--stdout > ${output_dir}/${id}__info.tsv
 done < "$id_file"

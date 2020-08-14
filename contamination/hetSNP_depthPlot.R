@@ -9,27 +9,9 @@
 #
 # Copyright 2017 Yu Wan <wanyuac@gmail.com>
 # Licensed under the Apache License, Version 2.0
-# Edition: 28/4, 2/5/2017, 8/3/2018
+# Edition: 28/4, 2/5/2017, 8/3/2018; last modification: 13/8/2020
 
-##### Constants ###############
-IMG.WIDTH <- 1000
-IMG.HEIGHT.SINGLE <- 600
-IMG.HEIGHT.TRIPLE <- 1200
-RES <- 72  # or 300
-UNIT <- "px"  # or "mm
-COL.REF <- "blue"  # colour for data points of reference alleles
-COL.ALT <- "red"  # colour for data points of alternative alleles
-COL.HOM <- "grey70"  # colour for data points of homozygous SNPs in the third panel
-COL.HET <- "red"  # colour for data points represting heterozygous SNPs in the third panel
-COL.AVGDP <- "blue"  # colour for the horizontal line of the average read depth in the third panel
-POINT.SHAPE <- 16  # the "pch" argument for plots
-POINT.SIZE <- 0.75  # the "cex" argument for points
-X.INTERVAL <- 0.5e6  # width of every interval of the X axis (500 kb by default)
-DP.INTERVAL <- 20
-CEX.AXIS <- 1.5
-CEX.AXIS.LABEL <- 2
-
-##### Data structure and functions ###############
+##### Arguments ###############
 library(optparse)
 
 optionList <- list(
@@ -44,6 +26,27 @@ optionList <- list(
 
 optParser <- OptionParser(option_list = optionList)
 
+
+##### Constants ###############
+IMG.WIDTH <- 1000
+IMG.HEIGHT.SINGLE <- 600
+IMG.HEIGHT.TRIPLE <- 1200
+RES <- 72  # or 300 for journal figures
+UNIT <- "px"  # or "mm
+COL.REF <- "blue"  # colour for data points of reference alleles
+COL.ALT <- "red"  # colour for data points of alternative alleles
+COL.HOM <- "grey70"  # colour for data points of homozygous SNPs in the third panel
+COL.HET <- "red"  # colour for data points represting heterozygous SNPs in the third panel
+COL.AVGDP <- "blue"  # colour for the horizontal line of the average read depth in the third panel
+POINT.SHAPE <- 16  # the "pch" argument for plots
+POINT.SIZE <- 0.75  # the "cex" argument for points
+X.INTERVAL <- 0.5e6  # width of every interval of the X axis (500 kb by default)
+DP.INTERVAL <- 20
+CEX.AXIS <- 1.5
+CEX.AXIS.LABEL <- 2
+
+
+##### Data structure and functions ###############
 checkColumnNames <- function(x, target.names, id) {
     presence <- target.names %in% names(x)
     if (sum(presence) < length(target.names)) {
@@ -63,6 +66,7 @@ parseDP4 <- function(x) {
 
     return(x)
 }
+
 
 ##### Import data ###############
 opts <- parse_args(optParser)  # parse arguments
@@ -103,6 +107,7 @@ if (is.null(opts$homSNP)) {
     hom$BAF <- round(hom$DP.ALT / hom$DP, digits = 4)
 }
 
+
 ###### Set up arguments of plots ###############
 img.name <- paste(opts$outdir, paste(n.het, opts$sampleName, paste0(opts$suffix, ".png"), sep = "__"),
                   sep = "/")  # output: [outdir]/[number of hetSNPs]__[sample name]__[suffix].png
@@ -115,6 +120,7 @@ if (opts$genomeLen %% X.INTERVAL > 0) {  # for the most of cases
     x.ticks <- seq(0, opts$genomeLen, by = X.INTERVAL)
     x.labels <- c("0", paste0(x.ticks[-1], "k"))
 }
+
 
 ##### Plot one/two panels ###############
 if (no.homSNP) {  # a single panel: hetSNPs
