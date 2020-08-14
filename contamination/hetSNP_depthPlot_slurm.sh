@@ -1,7 +1,7 @@
 #!/bin/bash
-# Copyright (C) 2017 Yu Wan <wanyuac@gmail.com>
+# Copyright (C) 2017-2020 Yu Wan <wanyuac@gmail.com>
 # Licensed under the GNU General Public License (GPL) version 3
-# Earliest editions: 24/4/2017; the latest edition: 13/6/2018
+# Earliest editions: 24/4/2017; the latest edition: 14 Aug 2020
 
 ##### Script information ##########
 display_usage(){
@@ -37,10 +37,10 @@ if [ -z "$1" ] || [[ $1 == -h ]] || [[ $1 == --help ]]; then
 fi
 
 # constants and defaults
-R_MODULE="R/3.3.3-vlsci_intel-2015.08.25"  # for Helix users
+R_MODULE="R/3.3.3-vlsci_intel-2015.08.25"  # Please change the module name for your computer cluster
 bundle_size=16
-code_dir="/vlsci/SG0006/shared/wan/scripts/contamination_assessment"
-PAR="sysgen"  # job partition
+code_dir="${HOME}/cgSNPs/contamination"
+PAR="sysgen"  # job partition; please change it for your cluster
 
 ##### Main program ##########
 # Read arguments

@@ -83,4 +83,4 @@ Examples from our development of R package [GeneMates](https://github.com/wanyua
 
 ### hetSNP\_depthPlot\_slurm.sh
 
-A bash script submitting SLURM jobs of `hetSNP_depthPlot.R` to a Linux computer cluster for a set of samples.
+A bash script submitting SLURM jobs of `hetSNP_depthPlot.R` to a Linux computer cluster for a set of samples. Users need to change constants (such as `R_MODULE`, `code_dir`, and so forth) in the script for their clusters.
