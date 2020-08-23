@@ -172,6 +172,7 @@ else
     echo 'Skipped variant calling as specified.'
 fi
 
+##### Generate depth plots #####
 if [ "$plot_hetSNPs" = true ]
 then
     for s in ${SAMPLES[@]}
