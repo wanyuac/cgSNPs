@@ -165,6 +165,7 @@ then
         fi
 
         # Extract homozygous and heterozygous SNPs from the quality-filtered VCF file.
+        # Note that indels and complex variants in file ${prefix}_sorted_qual.vcf.gz will not be transferred to either output file as follows.
         bcftools view --threads $NCPUS -i "AF==1" -v snps -Oz -o ${prefix}_sorted_qual_homSNPs.vcf.gz ${prefix}_sorted_qual.vcf.gz  # Homozygous SNPs
         bcftools view --threads $NCPUS -i "AF<1" -v snps -Oz -o ${prefix}_sorted_qual_hetSNPs.vcf.gz ${prefix}_sorted_qual.vcf.gz  # Heterozygous SNPs
 
