@@ -20,7 +20,7 @@
 #
 # Copyright (C) 2020 Yu Wan <wanyuac@126.com>
 # Licensed under the GNU General Public Licence version 3 (GPLv3) <https://www.gnu.org/licenses/>.
-# Release: 17 Aug 2020; latest update: 18 Aug 2020
+# Release: 17 Aug 2020; latest update: 28 Aug 2020
 
 cd $PBS_O_WORKDIR
 
@@ -164,8 +164,15 @@ then
             bcftools view --threads $NCPUS -i "DP>=${MIN_DP} & QUAL>=${MIN_QUAL} & MQ>=${MIN_MQ}" -T ^$EXCL -Oz -o ${prefix}_sorted_qual.vcf.gz ${prefix}_sorted.bcf
         fi
 
+        # Extract homozygous and heterozygous SNPs from the quality-filtered VCF file.
+        bcftools view --threads $NCPUS -i "AF==1" -v snps -Oz -o ${prefix}_sorted_qual_homSNPs.vcf.gz ${prefix}_sorted_qual.vcf.gz  # Homozygous SNPs
+        bcftools view --threads $NCPUS -i "AF<1" -v snps -Oz -o ${prefix}_sorted_qual_hetSNPs.vcf.gz ${prefix}_sorted_qual.vcf.gz  # Heterozygous SNPs
+
         # Index the vcf.gz file for visualisation in Artemis
         tabix -p vcf ${prefix}_sorted_qual.vcf.gz
+        tabix -p vcf ${prefix}_sorted_qual_homSNPs.vcf.gz
+        tabix -p vcf ${prefix}_sorted_qual_hetSNPs.vcf.gz
+
         echo 'Variant calling is successfully finished.'
     done
 else
@@ -178,10 +185,6 @@ then
     do
         echo "Plot read depths of SNPs from genome $s"
         prefix=${s}_${r}
-
-        # Extract homozygous and heterozygous SNPs from a bcf file
-        bcftools view --threads $NCPUS -i "AF==1" -v snps -Oz -o ${prefix}_sorted_qual_homSNPs.vcf.gz ${prefix}_sorted_qual.vcf.gz  # Homozygous SNPs
-        bcftools view --threads $NCPUS -i "AF<1" -v snps -Oz -o ${prefix}_sorted_qual_hetSNPs.vcf.gz ${prefix}_sorted_qual.vcf.gz  # Heterozygous SNPs
 
         # Extract positions and read depths of SNPs from the compressed VCF file (using the method in extractInfoFromVCF.sh)
         vcftools --gzvcf ${prefix}_sorted_qual_homSNPs.vcf.gz --get-INFO DP --get-INFO DP4 --stdout > ${prefix}_sorted_qual_homSNPs_DPs.tsv
