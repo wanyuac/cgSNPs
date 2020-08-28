@@ -6,7 +6,9 @@ Yu Wan
 
 
 
-Code in this repository is part of the [GeneMates](https://github.com/wanyuac/GeneMates) project.
+Code in this repository is part of the [GeneMates](https://github.com/wanyuac/GeneMates) project. Please open individual subdirectories to see user manuals.
+
+
 
 **Citation**
 
