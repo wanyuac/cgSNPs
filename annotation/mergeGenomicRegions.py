@@ -28,6 +28,7 @@ Publication: 25 Apr 2020; last modification: 11 Oct 2020.
 
 import sys
 import pandas as pd
+import itertools as itr
 from argparse import ArgumentParser
 
 def parse_arguments():
@@ -35,6 +36,7 @@ def parse_arguments():
     parser.add_argument("-i", type = str, required = False, default = "", help = "Path to the input CSV file")
     parser.add_argument("-o", type = str, required = True, help = "Path to the output CSV file")
     parser.add_argument("-b", action = "store_true", help = "Print coordinates in BED format rather than position format in the output file")
+    parser.add_argument("-n", type = str, required = False, default = "Seq", help = "Sequence name for the BED-format output")
 
     return parser.parse_args()
 
@@ -61,9 +63,9 @@ def main():
     # Merge overlapping regions
     n = len(tab.index)  # Number of remaining rows (regions) after deduplication
     if n > 1:
-        tab_merg = mergeRegions(tab, n)
+        tab_merge = mergeRegions(tab, n)
     else:
-        tab_merg = tab  # Do not need to merge regions when there is one region left.
+        tab_merge = tab  # Do not need to merge regions when there is one region left.
 
     # Convert positions to the BED format?
     if args.b:
@@ -75,10 +77,14 @@ def main():
         The following command converts the intuitive '1-start, fully-closed' position format to the BED format. It substracts one
         from start positions and keeps end positions the same, as introduced in the blog post.
         """
-        tab_merg["From"] -= 1
-
-    # Write the merged table in a CSV file
-    tab_merg.to_csv(args.o, header = False, index = False)
+        tab_merge["From"] -= 1
+        tab_merge.reset_index(drop = True, inplace = True)  # Discard indices for the join function
+        chr = pd.DataFrame({"Seq" : list(itr.repeat(args.n, tab_merge["From"].count()))}, dtype = str)  # Create a new column
+        tab_merge = chr.join(tab_merge)  # Equivalently append the new column to tab_merge
+        tab_merge.to_csv(args.o, header = False, index = False, sep = "\t", float_format = None)
+    else:
+        # Write the merged table in a CSV file
+        tab_merge.to_csv(args.o, header = False, index = False, sep = ",")
 
     return
 
