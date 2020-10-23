@@ -11,19 +11,23 @@ coordinate list and bcftools to filter out variants identified in certain region
 Input: A two-column, comma delimited (CSV), no-header text file in which each row defines the
 start and end coordinates of a genomic region, respectively. The input can also come from the stdin.
 
-Output: A test file of the same format as the input, but has its duplicated rows excluded and
-overlapping regions merged.
+Output format depends on parameter -f:
+    csv, a test file of the same format as the input, but has its duplicated rows excluded and overlapping regions merged.
+         Parameter '-n' is not used when -f = 'csv'.
+    tsv, Conventional tab-delimited, 1-based coordinates (Chr\tStart\tEnd), for bcftools to exclude certain regions from the
+         read alignment. Cf., option '--regions-file' of bcftools (http://samtools.github.io/bcftools/bcftools.html#common_options).
+    bed, print coordinates in BED format (0-based) rather than 1-based position format in the output file.
 
 Example command (three ways to run this script):
     python mergeGenomicRegions.py -i repeats.coords -o repeats_merged.coords
-    python filterCoords.py -i genome.coords -I 90 | python mergeGenomicRegion.py -o repeats_merged.coords
-    python filterCoords.py -i genome.coords -I 90 | python mergeGenomicRegion.py -b -o repeats_merged.bed
-    python filterCoords.py -i genome.coords -o repeats.coords -I 90 && python mergeGenomicRegion.py -i repeats.coords -o repeats_merged.coords
+    python filterCoords.py -i genome.coords -I 90 | python mergeGenomicRegion.py -f csv -o repeats_merged.coords
+    python filterCoords.py -i genome.coords -I 90 | python mergeGenomicRegion.py -f bed -n NZ_HG326223.1 -o repeats_merged.bed
+    python filterCoords.py -i genome.coords -o repeats.coords -I 90 && python mergeGenomicRegion.py -i repeats.coords -f tsv -n NZ_HG326223.1 -o repeats_merged.tsv
 
-Dependencies: Python v3 and packages pandas (pandas.pydata.org/)
+Dependencies: Python 3 and packages pandas (pandas.pydata.org/)
 Copyright 2020 Yu Wan <wanyuac@126.com>
 Licensed under the GNU General Public Licence version 3 (GPLv3) <https://www.gnu.org/licenses/>.
-Publication: 25 Apr 2020; last modification: 11 Oct 2020.
+Publication: 25 Apr 2020; last modification: 23 Oct 2020.
 """
 
 import sys
@@ -35,8 +39,8 @@ def parse_arguments():
     parser = ArgumentParser(description = "Exclude duplicated region definitions and merge overlapping regions")
     parser.add_argument("-i", type = str, required = False, default = "", help = "Path to the input CSV file")
     parser.add_argument("-o", type = str, required = True, help = "Path to the output CSV file")
-    parser.add_argument("-b", action = "store_true", help = "Print coordinates in BED format rather than position format in the output file")
-    parser.add_argument("-n", type = str, required = False, default = "Seq", help = "Sequence name for the BED-format output")
+    parser.add_argument("-f", type = str, required = False, default = "tsv", help = "tsv (default), bed, csv: Output format")
+    parser.add_argument("-n", type = str, required = False, default = "Seq", help = "Sequence name (often the accession number) for the BED-format output")
 
     return parser.parse_args()
 
@@ -67,25 +71,27 @@ def main():
     else:
         tab_merge = tab  # Do not need to merge regions when there is one region left.
 
-    # Convert positions to the BED format?
-    if args.b:
-        """
-        Some software requires the BED format (http://genome.ucsc.edu/FAQ/FAQformat#format1) for input coordinates. The BED format
-        adopts a '0-start, half-open' format rather than the intuitive 'position' format for the ease of calculating region lengths.
-        A detailed comparison of both formats can be found in a blog post:
-        http://genome.ucsc.edu/blog/the-ucsc-genome-browser-coordinate-counting-systems/.
-        The following command converts the intuitive '1-start, fully-closed' position format to the BED format. It substracts one
-        from start positions and keeps end positions the same, as introduced in the blog post.
-        """
-        tab_merge["From"] -= 1
+    # Prepare the output under a given format
+    if args.f == "csv":
+        # The simplest scenario: write the merged table in a CSV file
+        tab_merge.to_csv(args.o, header = False, index = False, sep = ",")
+    else:
         tab_merge.reset_index(drop = True, inplace = True)  # Discard indices for the join function
         chr = pd.DataFrame({"Seq" : list(itr.repeat(args.n, tab_merge["From"].count()))}, dtype = str)  # Create a new column
-        tab_merge = chr.join(tab_merge)  # Equivalently append the new column to tab_merge
+        tab_merge = chr.join(tab_merge)  # Equivalently append the new column to tab_merge    
+        
+        if args.f == "bed":
+            """
+            Some software requires the BED format (http://genome.ucsc.edu/FAQ/FAQformat#format1) for input coordinates. The BED format
+            adopts a '0-start, half-open' format rather than the intuitive 'position' format for the ease of calculating region lengths.
+            A detailed comparison of both formats can be found in a blog post:
+            http://genome.ucsc.edu/blog/the-ucsc-genome-browser-coordinate-counting-systems/.
+            The following command converts the intuitive '1-start, fully-closed' position format to the BED format. It substracts one
+            from start positions and keeps end positions the same, as introduced in the blog post.
+            """
+            tab_merge["From"] -= 1  # This is an essential difference between BED files and TSV files.
+        
         tab_merge.to_csv(args.o, header = False, index = False, sep = "\t", float_format = None)
-    else:
-        # Write the merged table in a CSV file
-        tab_merge.to_csv(args.o, header = False, index = False, sep = ",")
-
     return
 
 
