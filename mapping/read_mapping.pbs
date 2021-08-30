@@ -9,35 +9,54 @@
 # need to customise PBS parameters in this script for their system. Outputs are saved under the directory where users
 # submit their jobs.
 #
-# Parameters
+# Parameters (PBS mode)
 #   One parameter c: A configuration file
 #   PBS environment variables: PBS_O_WORKDIR, NCPUS
 #   Other variables are defined in the configuration file specified by parameter c
 #
+# Parameters (bash mode)
+#   $1 for the configuration file that defines other parameters
+#
 # Dependencies: bowtie2, bcftools, vcftools, and Rscript.
 #
-# Example command: qsub -v c=read_mapping.config read_mapping.pbs
+# Example commands:
+#    qsub -v c=read_mapping.config read_mapping.pbs  # PBS mode (preferred for HPC)
+#    bash read_mapping.pbs read_mapping.config  # bash mode
 #
-# Note: parameter ompthreads=4 in the header is necessary. Otherwise, $NCPUS always returns 1. (May be system specific though)
+# Note:
+#    1. parameter ompthreads=4 in the header is necessary. Otherwise, $NCPUS always returns 1. (May be system specific though)
+#    2. The reference sequence must be put in the current working directory. Otherwise, the bowtie2 command fails.
 #
-# Copyright (C) 2020 Yu Wan <wanyuac@126.com>
+# Copyright (C) 2020-2021 Yu Wan <wanyuac@126.com>
 # Licensed under the GNU General Public Licence version 3 (GPLv3) <https://www.gnu.org/licenses/>.
-# Release: 17 Aug 2020; latest update: 28 Aug 2020
+# Release: 17 Aug 2020; latest update: 29 Aug 2021
 
-##### Jump to the current working directory to enable use of relative paths (for example, to access the configuration file)
-# The job will be run under the directory where it is submitted.
-cd $PBS_O_WORKDIR
+#### Determine which mode to use
+if [ -z "$1" ]
+then
+    echo 'Run this mapping pipeline as a PBS script.'
+    if [ -z "$c" ]  # Argument c can be a path relative to the current working directory
+    then
+        echo 'Exit, as the mandatory configuration file is not provided.'
+        exit 0
+    fi
+else
+    echo 'Run this mapping pipeline as a bash script.'
+    c="$1"
+    PBS_O_WORKDIR=$PWD
+fi
 
 ##### Execute the configuration file to read parameters, which are set before submitting this job #####
 # This block also loads prerequsite modules when they are specified in the configuration file.
-if [ -z "$c" ]  # Argument c can be a path relative to the current working directory
-then
-    echo 'Exit, as the mandatory configuration file is not provided.'
-    exit 0
-elif [ -f "$c" ]
+if [ -f "$c" ]  # Run under the PBS mode in the directory where the job script is submitted so relative paths (for example, to access the configuration file) can be used
 then
     echo "Reading configurations from file ${c}."
     source $c  # Read user's configurations
+    cd $PBS_O_WORKDIR
+    if [ -z "$NCPUS" ]  # For the bash mode
+    then
+        NCPUS=$CPU_NUM
+    fi
 else
     echo "Cannot find the configuration file ${c}."
     exit 0
@@ -47,7 +66,7 @@ fi
 # Code in this block is platform-specific. Please modify the code for your system.
 if [ ! -z "$MODULE" ] && [ ! -z "${CONDA_ENV}" ]
 then
-    echo Activate conda environment $CONDA_ENV through module $MODULE
+    echo "Activate conda environment $CONDA_ENV through module $MODULE"
     module load $MODULE
     if [ $CONDA_ACTIVATE_METHOD = 'source' ]
     then
@@ -59,6 +78,7 @@ fi
 
 ##### Print arguments for subsequent STEPS #####
 echo 'Arguments for this pipeline:'
+echo "  Working directory: ${PWD}"
 echo "  Reference file: ${REF}"
 echo "  Read directory: ${READ_DIR}"
 echo "  Exclusion regions: ${EXCL}"
@@ -68,6 +88,7 @@ echo "  PLOIDY: $PLOIDY"
 echo "  MIN_DP: ${MIN_DP}"
 echo "  MIN_QUAL: ${MIN_QUAL}"
 echo "  MIN_MQ: ${MIN_MQ}"
+echo "  NCPUS: ${NCPUS}"
 
 ##### Read the step specification from argument $STEPS #####
 map_reads=false
