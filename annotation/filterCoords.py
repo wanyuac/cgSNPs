@@ -10,13 +10,17 @@ Example command: python filterCoords.py -i seq_seq.coords -o seq_seq_filtered.co
 RedDog:
 	Copyright (c) 2015, David Edwards, Bernie Pope, Kat Holt
 	All rights reserved. (see README.txt for more details)
-	
+
+Python v2 and v3 (recommended) compatible.
+
 Created: 10 Sep 2014
 Changes:
 		24 Apr 2020 - Update for Python3 syntax - Yu Wan <wanyuac@126.com>
 		28 Apr 2020 - Fix a critical issue that the script failed to ignore self-hits - Yu Wan
 		1 May 2020 - Enable output to stdout and rewrote the script - Yu Wan
+Latest update: 9 Jan 2022
 """
+from __future__ import print_function  # To enable Python 2 to interpret the command print(line, end = "").
 from argparse import ArgumentParser
 
 
@@ -26,8 +30,8 @@ def parse_arguments():
 						help = "Input: coords file from Mummer numcer (default none)")
 	parser.add_argument("-o", "--output", type = str, dest = "output", required = False, default = "",\
 						help = "Output: filtered coords file for parseSNPTable (default stdout)")
-	parser.add_argument("-I", "--Identity", type = float, dest = "Identity", required = False, default = 85.0,\
-						help = "Identity: level of Identity to filter out (default >=85.0)")
+	parser.add_argument("-I", "--Identity", type = float, dest = "Identity", required = False, default = 90.0,\
+						help = "Identity: level of Identity to filter out (default >=90.0)")
 	
 	return parser.parse_args()
 
@@ -77,7 +81,7 @@ def coordsOut(coords, output):
 	
 	if output == "":
 		for line in coords_out:
-			print(line, end = "")  # Do not append an extra newline character to every line.
+			print(line, end = "")  # Do not append an extra newline character to every line. (A feature introduced by Python 3)
 	else:
 		with open(output, "w") as output_file:
 			output_file.write(coords_out)
