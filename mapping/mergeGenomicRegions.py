@@ -27,7 +27,7 @@ Example command (three ways to run this script):
 Dependencies: Python 3 and packages pandas (pandas.pydata.org/)
 Copyright 2020 Yu Wan <wanyuac@126.com>
 Licensed under the GNU General Public Licence version 3 (GPLv3) <https://www.gnu.org/licenses/>.
-Publication: 25 Apr 2020; last modification: 23 Oct 2020.
+Publication: 25 Apr 2020; last modification: 18 Dec 2022.
 """
 
 import sys
@@ -38,8 +38,8 @@ from argparse import ArgumentParser
 def parse_arguments():
     parser = ArgumentParser(description = "Exclude duplicated region definitions and merge overlapping regions")
     parser.add_argument("-i", type = str, required = False, default = "", help = "Path to the input CSV file")
-    parser.add_argument("-o", type = str, required = True, help = "Path to the output CSV file")
-    parser.add_argument("-f", type = str, required = False, default = "tsv", help = "tsv (default), bed, csv: Output format")
+    parser.add_argument("-o", type = str, required = True, help = "Output file")
+    parser.add_argument("-f", type = str, required = False, default = "tsv", help = "Output format: tsv (default)/bed/csv")
     parser.add_argument("-n", type = str, required = False, default = "Seq", help = "Sequence name (often the accession number) for the BED-format output")
 
     return parser.parse_args()
@@ -130,7 +130,7 @@ def mergeRegions(tab, nr):
                 if n == 0:  # Has not written any row yet
                     tab_merg = pd.DataFrame(data = {"From": [r1["From"]], "To": [r1["To"]]})  # Initialise the output data frame
                 else:
-                    tab_merg = tab_merg.append(r1)
+                    tab_merg = tab_merg.append(r1)  # To-do: "FutureWarning: The frame.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead."
         else:  # No overlap
             if n == 0:
                 """
