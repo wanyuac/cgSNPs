@@ -17,7 +17,7 @@
 # Parameters (bash mode)
 #   $1 for the configuration file that defines other parameters
 #
-# Dependencies: bowtie2, bcftools, vcftools, and Rscript.
+# Dependencies: bowtie2/minimap2, bcftools, vcftools, and Rscript (optional, for drawing depth plots of SNPs).
 #
 # Example commands:
 #    qsub -v c=read_mapping.config read_mapping.pbs  # PBS mode (preferred for HPC)
@@ -27,9 +27,9 @@
 #    1. parameter ompthreads=4 in the header is necessary. Otherwise, $NCPUS always returns 1. (May be system specific though)
 #    2. The reference sequence must be put in the current working directory. Otherwise, the bowtie2 command fails.
 #
-# Copyright (C) 2020-2021 Yu Wan <wanyuac@126.com>
+# Copyright (C) 2020-2023 Yu Wan <wanyuac@126.com>
 # Licensed under the GNU General Public Licence version 3 (GPLv3) <https://www.gnu.org/licenses/>.
-# Release: 17 Aug 2020; latest update: 29 Aug 2021
+# Release: 17 Aug 2020; latest update: 1 Jan 2023
 
 #### Determine which mode to use
 if [ -z "$1" ]
@@ -81,6 +81,7 @@ echo 'Arguments for this pipeline:'
 echo "  Working directory: ${PWD}"
 echo "  Reference file: ${REF}"
 echo "  Read directory: ${READ_DIR}"
+echo "  Mapper: ${MAPPER}"
 echo "  Exclusion regions: ${EXCL}"
 echo "  MIN_BASE_QUAL: ${MIN_BASE_QUAL}"
 echo "  MIN_MAPPING_QUAL: ${MIN_MAPPING_QUAL}"
@@ -116,21 +117,24 @@ done
 r=`basename $REF $REF_EXT`  # Get the name of the reference genome via removing directory path and filename extension from the input path
 echo Name of the reference genome: $r
 
-# Build index files of the reference genome
-# Do not use 'ls -1 *.bt2' or "ls -1 *.* | grep -c '.bt2'" as they return an error when index files do not exist (the former command)
-# or no file exists (the latter command), making the indexing process fail.
-if [ ! -f ${r}.1.bt2 ]  # Command "-f *.bt2" returns an error of "too many arguments" when all the bt2 file exist.
+if [ "$MAPPER" == "Bowtie2" ]
 then
-    echo "Build index files for ${REF}"
-    bowtie2-build -f $REF $r
-else
-    echo Index files of $REF exist.
+    # Build index files of the reference genome
+    # Do not use 'ls -1 *.bt2' or "ls -1 *.* | grep -c '.bt2'" as they return an error when index files do not exist (the former command)
+    # or no file exists (the latter command), making the indexing process fail.
+    if [ ! -f ${r}.1.bt2 ]  # Command "-f *.bt2" returns an error of "too many arguments" when all the bt2 file exist.
+    then
+        echo "Build index files for ${REF}"
+        bowtie2-build -f $REF $r
+    else
+        echo Index files of $REF exist.
+    fi
 fi
 
 ##### Read mapping with Bowtie 2 #####
 if [ "$map_reads" = true ]
 then
-    echo 'Start to map reads against a reference genome.'
+    echo "Start to map reads against a reference genome using ${MAPPER}."
     
     # Set default read directory when paramter READ_DIR is not specified
     if [ -z "$READ_DIR" ]
@@ -143,7 +147,7 @@ then
     for s in ${SAMPLES[@]}
     do
         echo "Mapping reads of $s to reference $r"
-        prefix=${s}_${r}  # Common filename prefix of output files
+        prefix="${s}_to_${r}"  # Common filename prefix of output files
         # About read mapping and BAM sorting:
         #   Use local alignment of reads (soft clip) to avoid low-quality ends or adapter ends.
         #   Argument selection used by RedDog pipeline was taken into account.
@@ -151,7 +155,12 @@ then
         # quinlanlab.org/tutorials/samtools/samtools.html; bowtie-bio.sourceforge.net/bowtie2/manual.shtml
         # www.chenlianfu.com/?p=178; www.chenlianfu.com/?p=1399
         # Output: *.bam
-        bowtie2 -q --phred33 --local --sensitive-local -X 2000 --fr --no-mixed --threads $NCPUS -x $r -1 ${READ_DIR}/${s}_1.fastq.gz -2 ${READ_DIR}/${s}_2.fastq.gz | samtools view -S -b -u -@ $NCPUS - | samtools sort -@ $NCPUS -o ${prefix}_sorted.bam -
+        if [ "$MAPPER" == "Bowtie2" ]
+        then
+            bowtie2 -q --phred33 --local --sensitive-local -X 2000 --fr --no-mixed --threads $NCPUS -x $r -1 ${READ_DIR}/${s}_1.fastq.gz -2 ${READ_DIR}/${s}_2.fastq.gz | samtools view -S -b -u -@ $NCPUS - | samtools sort -@ $NCPUS -o ${prefix}_sorted.bam -
+        else
+            minimap2 --MD -a -x sr -t 4 $REF ${READ_DIR}/${s}_1.fastq.gz ${READ_DIR}/${s}_2.fastq.gz | samtools view -S -b -u -@ $NCPUS - | samtools sort -@ $NCPUS -o ${prefix}_sorted.bam -
+        fi
 
         # Index BAM for visualisation in IGV
         samtools index -@ $NCPUS ${prefix}_sorted.bam
@@ -169,35 +178,47 @@ then
     for s in ${SAMPLES[@]}
     do
         echo "Call variants for genome $s against reference $r"
-        prefix=${s}_${r}
+        prefix="${s}_to_${r}"
+        bcf="${prefix}_sorted.bcf"
         # Call variants from the sorted BAM file and produce a BCF file. Output: *.bcf
         # Bacteria are haploid organisms, whereas bcftools assumes the sample organism is diploid by default.
-        if [ $PLOIDY -eq 1 ]
+        if [ ! -f "$bcf" ]
         then
-            bcftools mpileup --threads $NCPUS -Q ${MIN_BASE_QUAL} -q ${MIN_MAPPING_QUAL} -f $REF ${prefix}_sorted.bam | bcftools call --threads $NCPUS --ploidy 1 -m -v -Ou | bcftools +fill-tags -Ou -o ${prefix}_sorted.bcf -- -t 'AF,AC,AN'
+            if [ $PLOIDY -eq 1 ]
+            then
+                bcftools mpileup --threads $NCPUS -Q ${MIN_BASE_QUAL} -q ${MIN_MAPPING_QUAL} -f $REF ${prefix}_sorted.bam | bcftools call --threads $NCPUS --ploidy 1 -m -v -Ou | bcftools +fill-tags -Ou -o $bcf -- -t 'AF,AC,AN'
+            else
+                bcftools mpileup --threads $NCPUS -Q ${MIN_BASE_QUAL} -q ${MIN_MAPPING_QUAL} -f $REF ${prefix}_sorted.bam | bcftools call --threads $NCPUS -m -v -Ou | bcftools +fill-tags -Ou -o $bcf -- -t 'AF,AC,AN'
+            fi
         else
-            bcftools mpileup --threads $NCPUS -Q ${MIN_BASE_QUAL} -q ${MIN_MAPPING_QUAL} -f $REF ${prefix}_sorted.bam | bcftools call --threads $NCPUS -m -v -Ou | bcftools +fill-tags -Ou -o ${prefix}_sorted.bcf -- -t 'AF,AC,AN'
+            echo "Output BCF file $bcf is present. Skip generating this output."  # Delete the BCF file if it needs to be recreated
         fi
 
         # Filter variants (quality checked) and index the compressed VCF. Output: *.vcf.gz
         # Although snpEff expects input of a plain VCF file, tabix only takes as input a compressed VCF file. (An error arises otherwise)
         # Use "bgzip -d" to decompress *.vcf.gz
+        bcftools view --threads $NCPUS -Oz -o ${prefix}_sorted.vcf.gz $bcf  # Unfiltered VCF
+        filtered_vcf_prefix="${prefix}_sorted_D${MIN_DP}Q${MIN_QUAL}M${MIN_MQ}"
         if [ -z "$EXCL" ]
         then
-            bcftools view --threads $NCPUS -i "DP>=${MIN_DP} & QUAL>=${MIN_QUAL} & MQ>=${MIN_MQ}" -Oz -o ${prefix}_sorted_qual.vcf.gz ${prefix}_sorted.bcf
+            bcftools view --threads $NCPUS -i "DP>=${MIN_DP} & QUAL>=${MIN_QUAL} & MQ>=${MIN_MQ}" -Oz -o ${filtered_vcf_prefix}.vcf.gz $bcf
         else
-            bcftools view --threads $NCPUS -i "DP>=${MIN_DP} & QUAL>=${MIN_QUAL} & MQ>=${MIN_MQ}" -T ^$EXCL -Oz -o ${prefix}_sorted_qual.vcf.gz ${prefix}_sorted.bcf
+            bcftools view --threads $NCPUS -i "DP>=${MIN_DP} & QUAL>=${MIN_QUAL} & MQ>=${MIN_MQ}" -T ^$EXCL -Oz -o ${filtered_vcf_prefix}.vcf.gz $bcf
         fi
+
+        # Index the vcf.gz file for visualisation in Artemis
+        tabix -p vcf ${prefix}_sorted.vcf.gz
+        tabix -p vcf ${filtered_vcf_prefix}.vcf.gz
 
         # Extract homozygous and heterozygous SNPs from the quality-filtered VCF file.
         # Note that indels and complex variants in file ${prefix}_sorted_qual.vcf.gz will not be transferred to either output file as follows.
-        bcftools view --threads $NCPUS -i "AF==1" -v snps -Oz -o ${prefix}_sorted_qual_homSNPs.vcf.gz ${prefix}_sorted_qual.vcf.gz  # Homozygous SNPs
-        bcftools view --threads $NCPUS -i "AF<1" -v snps -Oz -o ${prefix}_sorted_qual_hetSNPs.vcf.gz ${prefix}_sorted_qual.vcf.gz  # Heterozygous SNPs
-
-        # Index the vcf.gz file for visualisation in Artemis
-        tabix -p vcf ${prefix}_sorted_qual.vcf.gz
-        tabix -p vcf ${prefix}_sorted_qual_homSNPs.vcf.gz
-        tabix -p vcf ${prefix}_sorted_qual_hetSNPs.vcf.gz
+        if [ $PLOIDY -eq 2 ]
+        then
+            bcftools view --threads $NCPUS -i "AF==1" -v snps -Oz -o ${filtered_vcf_prefix}_homSNPs.vcf.gz ${filtered_vcf_prefix}.vcf.gz  # Homozygous SNPs
+            bcftools view --threads $NCPUS -i "AF<1" -v snps -Oz -o ${filtered_vcf_prefix}_hetSNPs.vcf.gz ${filtered_vcf_prefix}.vcf.gz  # Heterozygous SNPs
+            tabix -p vcf ${filtered_vcf_prefix}_homSNPs.vcf.gz
+            tabix -p vcf ${filtered_vcf_prefix}_hetSNPs.vcf.gz
+        fi
 
         echo 'Variant calling is successfully finished.'
     done
@@ -206,19 +227,20 @@ else
 fi
 
 ##### Generate depth plots #####
-if [ "$plot_hetSNPs" = true ]
+if [ "$plot_hetSNPs" = true ] && [ $PLOIDY -eq 2 ]
 then
     for s in ${SAMPLES[@]}
     do
         echo "Plot read depths of SNPs from genome $s"
-        prefix=${s}_${r}
+        prefix="${s}_to_${r}"
+        filtered_vcf_prefix="${prefix}_sorted_D${MIN_DP}Q${MIN_QUAL}M${MIN_MQ}"
 
         # Extract positions and read depths of SNPs from the compressed VCF file (using the method in extractInfoFromVCF.sh)
-        vcftools --gzvcf ${prefix}_sorted_qual_homSNPs.vcf.gz --get-INFO DP --get-INFO DP4 --stdout > ${prefix}_sorted_qual_homSNPs_DPs.tsv
-        vcftools --gzvcf ${prefix}_sorted_qual_hetSNPs.vcf.gz --get-INFO DP --get-INFO DP4 --stdout > ${prefix}_sorted_qual_hetSNPs_DPs.tsv
+        vcftools --gzvcf ${filtered_vcf_prefix}_homSNPs.vcf.gz --get-INFO DP --get-INFO DP4 --stdout > ${filtered_vcf_prefix}_homSNPs_DPs.tsv
+        vcftools --gzvcf ${filtered_vcf_prefix}_hetSNPs.vcf.gz --get-INFO DP --get-INFO DP4 --stdout > ${filtered_vcf_prefix}_hetSNPs_DPs.tsv
 
         # Generate a depth plot for the current sample
-        Rscript ${SCRIPT_PATH}/hetSNP_depthPlot.R --hetSNP ${prefix}_sorted_qual_hetSNPs_DPs.tsv --homSNP ${prefix}_sorted_qual_homSNPs_DPs.tsv --sampleName $prefix --genomeLen $REF_LEN --outdir $PWD --suffix DP4
+        Rscript ${SCRIPT_PATH}/hetSNP_depthPlot.R --hetSNP ${filtered_vcf_prefix}_hetSNPs_DPs.tsv --homSNP ${filtered_vcf_prefix}_homSNPs_DPs.tsv --sampleName $filtered_vcf_prefix --genomeLen $REF_LEN --outdir $PWD --suffix DP4
     done
 else
     echo "Skipped plotting heterozygous SNPs as specified."
