@@ -1,9 +1,9 @@
 #!/bin/bash
 # This pipeline maps paired-end Illumina reads and Nanopore long reads against a reference genome and produces BAM files for variant calling.
-# Dependency: samtools v1.17 and later versions, because earlier versions do not have option '-o'.
+# Dependency: minimap2, and samtools (>=1.17, because earlier versions do not have option '-o').
 # Copyright (C) 2023 Yu Wan <wanyuac@126.com>
 # Licensed under the GNU General Public Licence version 3 (GPLv3) <https://www.gnu.org/licenses/>.
-# Release: 11 Jan 2023; latest update: 29 July 2023
+# Release: 11 Jan 2023; latest update: 7 Aug 2023
 
 # Help information ###############
 show_help() {
@@ -18,7 +18,7 @@ show_help() {
         -t: Number of threads
     Example command:
         ./hybrid_read_mapping.sh -1=sample1_1.fastq.gz -2=sample1_2.fastq.gz -l=sample1.fastq.gz -r=reference.fna -s=sample1 -t=4
-    Dependencies: minimap2, samtools
+    Dependencies: minimap2, samtools (>=1.17)
     "
 }
 
