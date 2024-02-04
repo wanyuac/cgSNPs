@@ -25,9 +25,9 @@ Example command (three ways to run this script):
     python filterCoords.py -i genome.coords -o repeats.coords -I 90 && python mergeGenomicRegion.py -i repeats.coords -f tsv -n NZ_HG326223.1 -o repeats_merged.tsv
 
 Dependencies: Python 3 and packages pandas (pandas.pydata.org/)
-Copyright 2020 Yu Wan <wanyuac@126.com>
+Copyright 2020-2024 Yu Wan <wanyuac@126.com>
 Licensed under the GNU General Public Licence version 3 (GPLv3) <https://www.gnu.org/licenses/>.
-Publication: 25 Apr 2020; last modification: 18 Dec 2022.
+Publication: 25 Apr 2020; last modification: 5 Feb 2024.
 """
 
 import sys
@@ -130,7 +130,7 @@ def mergeRegions(tab, nr):
                 if n == 0:  # Has not written any row yet
                     tab_merg = pd.DataFrame(data = {"From": [r1["From"]], "To": [r1["To"]]})  # Initialise the output data frame
                 else:
-                    tab_merg = tab_merg.append(r1)  # To-do: "FutureWarning: The frame.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead."
+                    tab_merg = tab_merg.concat([tab_merg, r1], ignore_index = True)  # To-do: "FutureWarning: The frame.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead."
         else:  # No overlap
             if n == 0:
                 """
@@ -139,12 +139,12 @@ def mergeRegions(tab, nr):
                 """
                 tab_merg = pd.DataFrame(data = {"From": [r1["From"]], "To": [r1["To"]]})  # Initialise the output data frame
             else:  # No overlap and n > 0
-                tab_merg = tab_merg.append(r1)
+                tab_merg = tab_merg.concat([tab_merg, r1], ignore_index = True)
             n += 1
             
             # Deal with the last region
             if i == i_max:  # n must > 0
-                tab_merg = tab_merg.append(r2)
+                tab_merg = tab_merg.concat([tab_merg, r2], ignore_index = True)
             else:
                 r1 = r2
                 ub1 = ub2  # Move the upper boundary to that of r2 for subsequent comparisons
