@@ -130,7 +130,7 @@ def mergeRegions(tab, nr):
                 if n == 0:  # Has not written any row yet
                     tab_merg = pd.DataFrame(data = {"From": [r1["From"]], "To": [r1["To"]]})  # Initialise the output data frame
                 else:
-                    tab_merg = pd.concat([tab_merg, r1], ignore_index = True)  # To-do: "FutureWarning: The frame.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead."
+                    tab_merg = pd.concat([tab_merg, pd.DataFrame(r1).transpose()], ignore_index = True)
         else:  # No overlap
             if n == 0:
                 """
@@ -139,12 +139,12 @@ def mergeRegions(tab, nr):
                 """
                 tab_merg = pd.DataFrame(data = {"From": [r1["From"]], "To": [r1["To"]]})  # Initialise the output data frame
             else:  # No overlap and n > 0
-                tab_merg = pd.concat([tab_merg, r1], ignore_index = True)
+                tab_merg = pd.concat([tab_merg, pd.DataFrame(r1).transpose()], ignore_index = True)
             n += 1
             
             # Deal with the last region
             if i == i_max:  # n must > 0
-                tab_merg = pd.concat([tab_merg, r2], ignore_index = True)
+                tab_merg = pd.concat([tab_merg, pd.DataFrame(r2).transpose()], ignore_index = True)
             else:
                 r1 = r2
                 ub1 = ub2  # Move the upper boundary to that of r2 for subsequent comparisons
